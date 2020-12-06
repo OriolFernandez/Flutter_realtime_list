@@ -41,6 +41,21 @@ class _HomePageState extends State<HomePage> {
   Widget _bandTile(Band band) {
     return Dismissible(
       key: Key(band.id),
+      onDismissed: (_) {
+        // TODO call BE
+      },
+      direction: DismissDirection.startToEnd,
+      background: Container(
+        padding: EdgeInsets.only(left: 8),
+        color: Colors.red,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Delete',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      ),
       child: ListTile(
         leading: CircleAvatar(
           child: Text(band.name.substring(0, 2)),
@@ -58,47 +73,61 @@ class _HomePageState extends State<HomePage> {
   void addNewBand() {
     final textController = TextEditingController();
     if (Platform.isAndroid) {
-      showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: Text('add a band'),
-              content: TextField(
-                controller: textController,
-              ),
-              actions: [
-                MaterialButton(
-                  child: Text('Add'),
-                  elevation: 5,
-                  textColor: Colors.blue,
-                  onPressed: () => addBandToList(textController.text),
-                ),
-              ],
-            );
-          });
+      showAndroidDialog(textController);
     } else {
-      showCupertinoDialog(
-          context: context,
-          builder: (_) {
-            return CupertinoAlertDialog(
-              title: Text('Add Band'),
-              content: CupertinoTextField(
-                controller: textController,
-              ),
-              actions: [
-                CupertinoDialogAction(
-                  isDefaultAction: true,
-                  child: Text('ADD'),
-                  onPressed: () => addBandToList(textController.text),
-                ),
-                CupertinoDialogAction(
-                    isDestructiveAction: true,
-                    child: Text('Dismiss'),
-                    onPressed: () => Navigator.pop(context))
-              ],
-            );
-          });
+      showIOSDialog(textController);
     }
+  }
+
+  void showIOSDialog(TextEditingController textController) {
+    showCupertinoDialog(
+        context: context,
+        builder: (_) {
+          return CupertinoAlertDialog(
+            title: Text('Add Band'),
+            content: CupertinoTextField(
+              controller: textController,
+            ),
+            actions: [
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                child: Text('ADD'),
+                onPressed: () {
+                  addBandToList(textController.text);
+                  Navigator.pop(context);
+                },
+              ),
+              CupertinoDialogAction(
+                  isDestructiveAction: true,
+                  child: Text('Dismiss'),
+                  onPressed: () => Navigator.pop(context))
+            ],
+          );
+        });
+  }
+
+  void showAndroidDialog(TextEditingController textController) {
+    showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('add a band'),
+            content: TextField(
+              controller: textController,
+            ),
+            actions: [
+              MaterialButton(
+                child: Text('Add'),
+                elevation: 5,
+                textColor: Colors.blue,
+                onPressed: () {
+                  addBandToList(textController.text);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          );
+        });
   }
 
   void addBandToList(String name) {
@@ -106,6 +135,5 @@ class _HomePageState extends State<HomePage> {
       this.bands.add(Band(id: DateTime.now().toString(), name: name, votes: 0));
       setState(() {});
     }
-    Navigator.pop(context);
   }
 }
