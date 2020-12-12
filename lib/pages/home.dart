@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:realtime/model/band.dart';
+import 'package:provider/provider.dart';
+import 'package:realtime/model/item.dart';
+import 'package:realtime/services/socket_services.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -10,26 +12,49 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<Band> bands = [
-    Band(id: '1', name: 'Metalica', votes: 2),
-    Band(id: '2', name: 'Metalica', votes: 2),
-    Band(id: '3', name: 'Ramones', votes: 5),
-  ];
+  List<Item> _items = [];
+  @override
+  void initState() {
+    final SocketService socketService =
+        Provider.of<SocketService>(context, listen: false);
+    socketService.socket.on('current-items', (payload) {
+      _items = (payload as List).map((item) => Item.fromMap(item)).toList();
+      print("Current items $_items");
+      setState(() {});
+    });
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    final SocketService socketService =
+        Provider.of<SocketService>(context, listen: false);
+    socketService.socket.off('current-items');
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final SocketService socketService = Provider.of<SocketService>(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Las bandas',
+          'Lista de la compra',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: Colors.orange[400],
+        elevation: 1,
+        actions: [
+          Container(
+            margin: EdgeInsets.only(right: 10),
+            child: socketService.actionOnServiceStatus(),
+          ),
+        ],
       ),
       body: ListView.builder(
-          itemCount: bands.length,
+          itemCount: _items.length,
           itemBuilder: (BuildContext context, int index) =>
-              _bandTile(bands[index])),
+              _bandTile(_items[index])),
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.add),
         onPressed: addNewBand,
@@ -38,9 +63,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _bandTile(Band band) {
+  Widget _bandTile(Item item) {
+    final SocketService socketService =
+        Provider.of<SocketService>(context, listen: false);
     return Dismissible(
-      key: Key(band.id),
+      key: Key(item.id),
       onDismissed: (_) {
         // TODO call BE
       },
@@ -58,14 +85,18 @@ class _HomePageState extends State<HomePage> {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          child: Text(band.name.substring(0, 2)),
+          child: Text(item.name.substring(0, 2)),
           backgroundColor: Colors.blue[200],
         ),
-        title: Text(band.name),
+        title: Text("${item.name}"),
         trailing: Text(
-          '${band.votes}',
+          '${item.numberToBuy}',
           style: TextStyle(fontSize: 20),
         ),
+        onTap: () {
+          print("Tap on ${item.id}");
+          socketService.socket.emit('increase-item', {'id': item.id});
+        },
       ),
     );
   }
@@ -84,22 +115,22 @@ class _HomePageState extends State<HomePage> {
         context: context,
         builder: (_) {
           return CupertinoAlertDialog(
-            title: Text('Add Band'),
+            title: Text('Añadir producto'),
             content: CupertinoTextField(
               controller: textController,
             ),
             actions: [
               CupertinoDialogAction(
                 isDefaultAction: true,
-                child: Text('ADD'),
+                child: Text('Añadir'),
                 onPressed: () {
-                  addBandToList(textController.text);
+                  addItemToList(textController.text);
                   Navigator.pop(context);
                 },
               ),
               CupertinoDialogAction(
                   isDestructiveAction: true,
-                  child: Text('Dismiss'),
+                  child: Text('Cancelar'),
                   onPressed: () => Navigator.pop(context))
             ],
           );
@@ -111,17 +142,17 @@ class _HomePageState extends State<HomePage> {
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: Text('add a band'),
+            title: Text('Añadir producto'),
             content: TextField(
               controller: textController,
             ),
             actions: [
               MaterialButton(
-                child: Text('Add'),
+                child: Text('Añadir'),
                 elevation: 5,
                 textColor: Colors.blue,
                 onPressed: () {
-                  addBandToList(textController.text);
+                  addItemToList(textController.text);
                   Navigator.pop(context);
                 },
               ),
@@ -130,10 +161,30 @@ class _HomePageState extends State<HomePage> {
         });
   }
 
-  void addBandToList(String name) {
+  void addItemToList(String name) {
     if (name.length > 1) {
-      this.bands.add(Band(id: DateTime.now().toString(), name: name, votes: 0));
+      this
+          ._items
+          .add(Item(id: DateTime.now().toString(), name: name, numberToBuy: 1));
       setState(() {});
     }
+  }
+}
+
+extension ServiceSocketExtension on SocketService {
+  Widget actionOnServiceStatus() {
+    Widget _widget;
+    switch (this.serverStatus) {
+      case ServerStatus.Online:
+        _widget = Icon(Icons.check_circle, color: Colors.green);
+        break;
+      case ServerStatus.Offline:
+        _widget = Icon(Icons.check_circle, color: Colors.red);
+        break;
+      case ServerStatus.Connecting:
+        _widget = Icon(Icons.check_circle, color: Colors.blue);
+        break;
+    }
+    return _widget;
   }
 }

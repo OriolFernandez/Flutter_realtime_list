@@ -19,6 +19,12 @@ class StatusPage extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18,
                   ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.mail),
+                  onPressed: () {
+                    socketSevice.sendMessage('Hello');
+                  },
                 )
               ],
             ),
