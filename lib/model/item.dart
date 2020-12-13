@@ -9,6 +9,11 @@ class Item {
     this.numberToBuy,
   });
 
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'numberToBuy': numberToBuy,
+      };
+
   factory Item.fromMap(Map<String, dynamic> map) {
     return Item(
       id: map.containsKey('id') ? map['id'] : "",

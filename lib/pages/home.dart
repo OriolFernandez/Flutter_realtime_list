@@ -19,7 +19,6 @@ class _HomePageState extends State<HomePage> {
         Provider.of<SocketService>(context, listen: false);
     socketService.socket.on('current-items', (payload) {
       _items = (payload as List).map((item) => Item.fromMap(item)).toList();
-      print("Current items $_items");
       setState(() {});
     });
     super.initState();
@@ -94,7 +93,6 @@ class _HomePageState extends State<HomePage> {
           style: TextStyle(fontSize: 20),
         ),
         onTap: () {
-          print("Tap on ${item.id}");
           socketService.socket.emit('increase-item', {'id': item.id});
         },
       ),
@@ -163,10 +161,12 @@ class _HomePageState extends State<HomePage> {
 
   void addItemToList(String name) {
     if (name.length > 1) {
-      this
-          ._items
-          .add(Item(id: DateTime.now().toString(), name: name, numberToBuy: 1));
-      setState(() {});
+      Item item =
+          Item(id: DateTime.now().toString(), name: name, numberToBuy: 1);
+      //setState(() {});
+      final SocketService socketService =
+          Provider.of<SocketService>(context, listen: false);
+      socketService.socket.emit('add-new-item', item.toJson());
     }
   }
 }
